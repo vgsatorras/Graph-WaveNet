@@ -5,7 +5,7 @@ import time
 import util
 import matplotlib.pyplot as plt
 from engine import trainer
-
+import time
 parser = argparse.ArgumentParser()
 parser.add_argument('--device',type=str,default='cuda:3',help='')
 parser.add_argument('--data',type=str,default='data/METR-LA',help='data path')
@@ -66,7 +66,9 @@ def main():
     his_loss =[]
     val_time = []
     train_time = []
+    
     for i in range(1,args.epochs+1):
+        avg_time, counter_time = 0, 0
         #if i % 10 == 0:
             #lr = max(0.000002,args.learning_rate * (0.1 ** (i // 10)))
             #for g in engine.optimizer.param_groups:
@@ -81,13 +83,21 @@ def main():
             trainx= trainx.transpose(1, 3)
             trainy = torch.Tensor(y).to(device)
             trainy = trainy.transpose(1, 3)
+            if torch.cuda.is_available(): torch.cuda.synchronize()
+            T1 = time.time()
             metrics = engine.train(trainx, trainy[:,0,:,:])
+            if torch.cuda.is_available(): torch.cuda.synchronize()
+            T2 = time.time()
+            avg_time += (T2 - T1)
+            counter_time += 1
             train_loss.append(metrics[0])
             train_mape.append(metrics[1])
             train_rmse.append(metrics[2])
             if iter % args.print_every == 0 :
                 log = 'Iter: {:03d}, Train Loss: {:.4f}, Train MAPE: {:.4f}, Train RMSE: {:.4f}'
                 print(log.format(iter, train_loss[-1], train_mape[-1], train_rmse[-1]),flush=True)
+                print("Average forward time: %.4f" % (1.0*avg_time/counter_time))
+            avg_time
         t2 = time.time()
         train_time.append(t2-t1)
         #validation
